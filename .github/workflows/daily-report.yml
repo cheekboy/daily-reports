@@ -88,42 +88,47 @@ jobs:
               year = datetime.now().strftime("%Y")
               github_link = f"https://github.com/BuilderPulse/BuilderPulse/blob/main/zh/{year}/{today}.md"
 
-              # 使用飞书的 post 富文本格式，支持 Markdown
+              # 限制内容长度
+              if len(content) > 3000:
+                  content = content[:3000] + "\n\n...(内容过长，请点击下方链接查看完整版)"
+
+              # 使用飞书交互式卡片格式
               payload = {
-                  "msg_type": "post",
-                  "content": {
-                      "post": {
-                          "zh_cn": {
-                              "title": f"{title} - {today}",
-                              "content": [
-                                  [
-                                      {
-                                          "tag": "text",
-                                          "text": f"📅 日期: {today}\n"
-                                      }
-                                  ],
-                                  [
-                                      {
-                                          "tag": "a",
-                                          "text": "🔗 查看完整报告",
-                                          "href": github_link
-                                      }
-                                  ],
-                                  [
-                                      {
-                                          "tag": "text",
-                                          "text": "\n" + "="*40 + "\n\n"
-                                      }
-                                  ],
-                                  [
-                                      {
-                                          "tag": "text",
-                                          "text": content[:3500] if len(content) > 3500 else content
-                                      }
-                                  ]
+                  "msg_type": "interactive",
+                  "card": {
+                      "header": {
+                          "title": {
+                              "tag": "plain_text",
+                              "content": f"{title} - {today}"
+                          },
+                          "template": "blue"
+                      },
+                      "elements": [
+                          {
+                              "tag": "div",
+                              "text": {
+                                  "tag": "lark_md",
+                                  "content": content
+                              }
+                          },
+                          {
+                              "tag": "hr"
+                          },
+                          {
+                              "tag": "action",
+                              "actions": [
+                                  {
+                                      "tag": "button",
+                                      "text": {
+                                          "tag": "plain_text",
+                                          "content": "📖 查看完整报告"
+                                      },
+                                      "type": "primary",
+                                      "url": github_link
+                                  }
                               ]
                           }
-                      }
+                      ]
                   }
               }
 
