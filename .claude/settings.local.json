@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__rube__RUBE_SEARCH_TOOLS",
+      "mcp__rube__RUBE_MANAGE_CONNECTIONS",
+      "mcp__rube__RUBE_MULTI_EXECUTE_TOOL",
+      "mcp__rube__RUBE_GET_TOOL_SCHEMAS",
+      "WebFetch(domain:github.com)",
+      "Bash(python3 *)",
+      "Bash(git init *)",
+      "Bash(git branch *)",
+      "Bash(git add *)"
+    ]
+  }
+}

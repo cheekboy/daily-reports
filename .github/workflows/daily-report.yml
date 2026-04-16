@@ -1,0 +1,129 @@
+name: 每日推送 BuilderPulse 日报到飞书
+
+on:
+  schedule:
+    # 每天北京时间 12:30 (UTC 4:30) 运行
+    - cron: '30 4 * * *'
+  workflow_dispatch: # 允许手动触发
+
+jobs:
+  send-daily-report:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout BuilderPulse 仓库
+        uses: actions/checkout@v4
+        with:
+          repository: BuilderPulse/BuilderPulse
+          ref: main
+
+      - name: 设置 Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: 安装依赖
+        run: |
+          pip install requests
+
+      - name: 获取并发送日报
+        env:
+          FEISHU_WEBHOOK: ${{ secrets.FEISHU_WEBHOOK }}
+        run: |
+          python3 << 'EOF'
+          import requests
+          import json
+          import os
+          from datetime import datetime
+          from pathlib import Path
+
+          FEISHU_WEBHOOK = os.environ.get('FEISHU_WEBHOOK', 'https://open.larksuite.com/open-apis/bot/v2/hook/5f789770-cd88-4846-aaea-702e38eaaff0')
+
+          def find_latest_report():
+              """查找最新的中文日报"""
+              today = datetime.now().strftime("%Y-%m-%d")
+
+              # 查找可能的日报文件
+              possible_paths = [
+                  f"reports/{today}_zh.md",
+                  f"reports/{today}.md",
+                  f"daily/{today}_zh.md",
+                  f"daily/{today}.md",
+                  f"{today}_zh.md",
+                  f"{today}.md",
+                  "README.md",
+              ]
+
+              for path in possible_paths:
+                  file_path = Path(path)
+                  if file_path.exists():
+                      print(f"✅ 找到日报: {path}")
+                      return file_path.read_text(encoding='utf-8')
+
+              # 如果找不到今天的，查找最新的 markdown 文件
+              for dir_name in ['reports', 'daily', '.']:
+                  dir_path = Path(dir_name)
+                  if dir_path.exists() and dir_path.is_dir():
+                      md_files = sorted(dir_path.glob('*.md'), reverse=True)
+                      for md_file in md_files:
+                          if 'zh' in md_file.name.lower() or '中文' in md_file.read_text(encoding='utf-8')[:500]:
+                              print(f"✅ 找到最新日报: {md_file}")
+                              return md_file.read_text(encoding='utf-8')
+
+              return None
+
+          def send_to_feishu(content, title="📊 BuilderPulse 日报"):
+              """发送到飞书"""
+              if not content:
+                  content = "⚠️ 今天的日报还未生成"
+
+              # 限制长度
+              max_length = 3000
+              if len(content) > max_length:
+                  # 尝试智能截断，保留开头和结尾
+                  content = content[:max_length-100] + "\n\n...(内容过长，已截断)\n\n" + content[-100:]
+
+              payload = {
+                  "msg_type": "text",
+                  "content": {
+                      "text": f"{title}\n{'='*40}\n\n{content}"
+                  }
+              }
+
+              try:
+                  response = requests.post(
+                      FEISHU_WEBHOOK,
+                      headers={"Content-Type": "application/json"},
+                      data=json.dumps(payload),
+                      timeout=30
+                  )
+                  response.raise_for_status()
+                  result = response.json()
+
+                  if result.get('code') == 0:
+                      print("✅ 发送到飞书成功")
+                      return True
+                  else:
+                      print(f"❌ 飞书返回错误: {result}")
+                      return False
+
+              except Exception as e:
+                  print(f"❌ 发送失败: {e}")
+                  return False
+
+          def main():
+              print(f"🚀 开始执行 - {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+
+              # 查找日报
+              report = find_latest_report()
+
+              if report:
+                  print(f"📄 日报长度: {len(report)} 字符")
+                  send_to_feishu(report)
+              else:
+                  print("❌ 未找到日报文件")
+                  send_to_feishu(None)
+
+          if __name__ == "__main__":
+              main()
+          EOF
