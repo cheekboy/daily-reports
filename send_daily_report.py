@@ -10,7 +10,7 @@ from datetime import datetime
 
 # 配置
 GITHUB_REPO = "BuilderPulse/BuilderPulse"
-FEISHU_WEBHOOK = "https://open.larksuite.com/open-apis/bot/v2/hook/5f789770-cd88-4846-aaea-702e38eaaff0"
+FEISHU_WEBHOOK = "https://open.feishu.cn/open-apis/bot/v2/hook/09a06538-7405-4af4-b6af-3879c472cc34"
 
 def get_latest_daily_report():
     """从 GitHub 获取最新的中文日报"""
