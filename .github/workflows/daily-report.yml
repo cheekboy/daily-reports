@@ -16,11 +16,15 @@ jobs:
         with:
           repository: BuilderPulse/BuilderPulse
           ref: main
+        env:
+          FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
       - name: 设置 Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+        env:
+          FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
       - name: 安装依赖
         run: |
@@ -28,7 +32,7 @@ jobs:
 
       - name: 获取并发送日报
         env:
-          FEISHU_WEBHOOK: ${{ secrets.FEISHU_WEBHOOK }}
+          FEISHU_WEBHOOK: https://open.larksuite.com/open-apis/bot/v2/hook/5f789770-cd88-4846-aaea-702e38eaaff0
         run: |
           python3 << 'EOF'
           import requests
@@ -37,7 +41,11 @@ jobs:
           from datetime import datetime
           from pathlib import Path
 
-          FEISHU_WEBHOOK = os.environ.get('FEISHU_WEBHOOK', 'https://open.larksuite.com/open-apis/bot/v2/hook/5f789770-cd88-4846-aaea-702e38eaaff0')
+          FEISHU_WEBHOOK = os.environ.get('FEISHU_WEBHOOK')
+
+          if not FEISHU_WEBHOOK:
+              print("❌ 错误: FEISHU_WEBHOOK 环境变量未设置")
+              exit(1)
 
           def find_latest_report():
               """查找最新的中文日报"""
