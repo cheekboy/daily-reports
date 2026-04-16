@@ -83,24 +83,47 @@ jobs:
               if not content:
                   content = "⚠️ 今天的日报还未生成"
 
-              # 飞书富文本消息限制，如果内容太长需要分段发送
-              max_length = 4000
-
-              if len(content) > max_length:
-                  # 截取前面部分，保留完整性
-                  content = content[:max_length] + "\n\n...(内容过长，请访问 GitHub 查看完整版)"
-
               # 添加日期和链接
               today = datetime.now().strftime("%Y-%m-%d")
               year = datetime.now().strftime("%Y")
               github_link = f"https://github.com/BuilderPulse/BuilderPulse/blob/main/zh/{year}/{today}.md"
 
-              message = f"{title}\n{'='*40}\n📅 {today}\n🔗 {github_link}\n\n{content}"
-
+              # 使用飞书的 post 富文本格式，支持 Markdown
               payload = {
-                  "msg_type": "text",
+                  "msg_type": "post",
                   "content": {
-                      "text": message
+                      "post": {
+                          "zh_cn": {
+                              "title": f"{title} - {today}",
+                              "content": [
+                                  [
+                                      {
+                                          "tag": "text",
+                                          "text": f"📅 日期: {today}\n"
+                                      }
+                                  ],
+                                  [
+                                      {
+                                          "tag": "a",
+                                          "text": "🔗 查看完整报告",
+                                          "href": github_link
+                                      }
+                                  ],
+                                  [
+                                      {
+                                          "tag": "text",
+                                          "text": "\n" + "="*40 + "\n\n"
+                                      }
+                                  ],
+                                  [
+                                      {
+                                          "tag": "text",
+                                          "text": content[:3500] if len(content) > 3500 else content
+                                      }
+                                  ]
+                              ]
+                          }
+                      }
                   }
               }
 
