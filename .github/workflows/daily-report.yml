@@ -78,6 +78,88 @@ jobs:
 
               return None
 
+          def parse_markdown_to_feishu(content):
+              """将 Markdown 转换为飞书卡片元素"""
+              lines = content.split('\n')
+              elements = []
+
+              for line in lines[:50]:  # 限制行数
+                  line = line.strip()
+                  if not line:
+                      continue
+
+                  # 处理标题
+                  if line.startswith('# '):
+                      elements.append({
+                          "tag": "div",
+                          "text": {
+                              "tag": "plain_text",
+                              "content": f"📌 {line[2:]}"
+                          }
+                      })
+                  elif line.startswith('## '):
+                      elements.append({
+                          "tag": "div",
+                          "text": {
+                              "tag": "plain_text",
+                              "content": f"\n▶ {line[3:]}"
+                          }
+                      })
+                  elif line.startswith('### '):
+                      elements.append({
+                          "tag": "div",
+                          "text": {
+                              "tag": "plain_text",
+                              "content": f"  • {line[4:]}"
+                          }
+                      })
+                  # 处理引用
+                  elif line.startswith('>'):
+                      text = line.lstrip('> ').strip()
+                      if text:
+                          elements.append({
+                              "tag": "note",
+                              "elements": [{
+                                  "tag": "plain_text",
+                                  "content": text
+                              }]
+                          })
+                  # 处理列表
+                  elif line.startswith('- ') or line.startswith('* '):
+                      elements.append({
+                          "tag": "div",
+                          "text": {
+                              "tag": "plain_text",
+                              "content": f"  • {line[2:]}"
+                          }
+                      })
+                  # 处理数字列表
+                  elif line[0].isdigit() and '. ' in line:
+                      elements.append({
+                          "tag": "div",
+                          "text": {
+                              "tag": "plain_text",
+                              "content": f"  {line}"
+                          }
+                      })
+                  # 处理分隔线
+                  elif line.startswith('---'):
+                      elements.append({"tag": "hr"})
+                  # 普通文本
+                  else:
+                      # 移除 Markdown 格式符号
+                      text = line.replace('**', '').replace('*', '').replace('`', '')
+                      if len(text) > 5:  # 过滤太短的行
+                          elements.append({
+                              "tag": "div",
+                              "text": {
+                                  "tag": "plain_text",
+                                  "content": text
+                              }
+                          })
+
+              return elements
+
           def send_to_feishu(content, title="📊 BuilderPulse 日报"):
               """发送到飞书"""
               if not content:
@@ -86,21 +168,32 @@ jobs:
               # 添加日期和链接
               today = datetime.now().strftime("%Y-%m-%d")
               year = datetime.now().strftime("%Y")
+              github_link = f"https://github.com/BuilderPulse/BuilderPulse/blob/main/zh/{year}/{today}.md"
 
-              # 提供两个链接选项
-              github_blob_link = f"https://github.com/BuilderPulse/BuilderPulse/blob/main/zh/{year}/{today}.md"
-              github_raw_link = f"https://raw.githubusercontent.com/BuilderPulse/BuilderPulse/main/zh/{year}/{today}.md"
+              # 解析 Markdown 内容
+              content_elements = parse_markdown_to_feishu(content)
 
-              # 提取日报摘要（前几行）
-              lines = content.split('\n')
-              summary_lines = []
-              for line in lines[:20]:  # 取前20行
-                  if line.strip():
-                      summary_lines.append(line)
-                  if len(summary_lines) >= 10:  # 最多10行非空内容
-                      break
-
-              summary = '\n'.join(summary_lines)
+              # 添加查看完整报告的提示和按钮
+              content_elements.append({"tag": "hr"})
+              content_elements.append({
+                  "tag": "note",
+                  "elements": [{
+                      "tag": "plain_text",
+                      "content": "以上为摘要，点击下方按钮查看完整内容"
+                  }]
+              })
+              content_elements.append({
+                  "tag": "action",
+                  "actions": [{
+                      "tag": "button",
+                      "text": {
+                          "tag": "plain_text",
+                          "content": "📖 查看完整报告"
+                      },
+                      "type": "primary",
+                      "url": github_link
+                  }]
+              })
 
               # 使用飞书交互式卡片格式
               payload = {
@@ -113,50 +206,7 @@ jobs:
                           },
                           "template": "blue"
                       },
-                      "elements": [
-                          {
-                              "tag": "div",
-                              "text": {
-                                  "tag": "plain_text",
-                                  "content": summary
-                              }
-                          },
-                          {
-                              "tag": "hr"
-                          },
-                          {
-                              "tag": "note",
-                              "elements": [
-                                  {
-                                      "tag": "plain_text",
-                                      "content": "点击下方按钮查看完整日报内容"
-                                  }
-                              ]
-                          },
-                          {
-                              "tag": "action",
-                              "actions": [
-                                  {
-                                      "tag": "button",
-                                      "text": {
-                                          "tag": "plain_text",
-                                          "content": "📖 在 GitHub 查看"
-                                      },
-                                      "type": "primary",
-                                      "url": github_blob_link
-                                  },
-                                  {
-                                      "tag": "button",
-                                      "text": {
-                                          "tag": "plain_text",
-                                          "content": "📄 纯文本版本"
-                                      },
-                                      "type": "default",
-                                      "url": github_raw_link
-                                  }
-                              ]
-                          }
-                      ]
+                      "elements": content_elements
                   }
               }
 
