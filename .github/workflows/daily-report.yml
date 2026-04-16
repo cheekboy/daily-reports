@@ -50,16 +50,16 @@ jobs:
           def find_latest_report():
               """查找最新的中文日报"""
               today = datetime.now().strftime("%Y-%m-%d")
+              year = datetime.now().strftime("%Y")
 
-              # 查找可能的日报文件
+              # 按照 BuilderPulse 的目录结构查找
+              # 格式: zh/YYYY/YYYY-MM-DD.md
               possible_paths = [
+                  f"zh/{year}/{today}.md",
+                  f"zh/{today}.md",
                   f"reports/{today}_zh.md",
-                  f"reports/{today}.md",
                   f"daily/{today}_zh.md",
-                  f"daily/{today}.md",
                   f"{today}_zh.md",
-                  f"{today}.md",
-                  "README.md",
               ]
 
               for path in possible_paths:
@@ -68,15 +68,13 @@ jobs:
                       print(f"✅ 找到日报: {path}")
                       return file_path.read_text(encoding='utf-8')
 
-              # 如果找不到今天的，查找最新的 markdown 文件
-              for dir_name in ['reports', 'daily', '.']:
-                  dir_path = Path(dir_name)
-                  if dir_path.exists() and dir_path.is_dir():
-                      md_files = sorted(dir_path.glob('*.md'), reverse=True)
-                      for md_file in md_files:
-                          if 'zh' in md_file.name.lower() or '中文' in md_file.read_text(encoding='utf-8')[:500]:
-                              print(f"✅ 找到最新日报: {md_file}")
-                              return md_file.read_text(encoding='utf-8')
+              # 如果找不到今天的，查找 zh/ 目录下最新的
+              zh_dir = Path(f"zh/{year}")
+              if zh_dir.exists():
+                  md_files = sorted(zh_dir.glob('*.md'), reverse=True)
+                  if md_files:
+                      print(f"✅ 找到最新日报: {md_files[0]}")
+                      return md_files[0].read_text(encoding='utf-8')
 
               return None
 
@@ -85,16 +83,24 @@ jobs:
               if not content:
                   content = "⚠️ 今天的日报还未生成"
 
-              # 限制长度
-              max_length = 3000
+              # 飞书富文本消息限制，如果内容太长需要分段发送
+              max_length = 4000
+
               if len(content) > max_length:
-                  # 尝试智能截断，保留开头和结尾
-                  content = content[:max_length-100] + "\n\n...(内容过长，已截断)\n\n" + content[-100:]
+                  # 截取前面部分，保留完整性
+                  content = content[:max_length] + "\n\n...(内容过长，请访问 GitHub 查看完整版)"
+
+              # 添加日期和链接
+              today = datetime.now().strftime("%Y-%m-%d")
+              year = datetime.now().strftime("%Y")
+              github_link = f"https://github.com/BuilderPulse/BuilderPulse/blob/main/zh/{year}/{today}.md"
+
+              message = f"{title}\n{'='*40}\n📅 {today}\n🔗 {github_link}\n\n{content}"
 
               payload = {
                   "msg_type": "text",
                   "content": {
-                      "text": f"{title}\n{'='*40}\n\n{content}"
+                      "text": message
                   }
               }
 
