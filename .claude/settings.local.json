@@ -12,7 +12,8 @@
       "Bash(git add *)",
       "Bash(git commit *)",
       "Bash(git remote *)",
-      "Bash(git push *)"
+      "Bash(git push *)",
+      "Bash(curl -s \"https://raw.githubusercontent.com/BuilderPulse/BuilderPulse/main/zh/2026/2026-04-16.md\")"
     ]
   }
 }

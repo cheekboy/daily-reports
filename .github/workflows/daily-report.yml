@@ -86,11 +86,21 @@ jobs:
               # 添加日期和链接
               today = datetime.now().strftime("%Y-%m-%d")
               year = datetime.now().strftime("%Y")
-              github_link = f"https://github.com/BuilderPulse/BuilderPulse/blob/main/zh/{year}/{today}.md"
 
-              # 限制内容长度
-              if len(content) > 3000:
-                  content = content[:3000] + "\n\n...(内容过长，请点击下方链接查看完整版)"
+              # 提供两个链接选项
+              github_blob_link = f"https://github.com/BuilderPulse/BuilderPulse/blob/main/zh/{year}/{today}.md"
+              github_raw_link = f"https://raw.githubusercontent.com/BuilderPulse/BuilderPulse/main/zh/{year}/{today}.md"
+
+              # 提取日报摘要（前几行）
+              lines = content.split('\n')
+              summary_lines = []
+              for line in lines[:20]:  # 取前20行
+                  if line.strip():
+                      summary_lines.append(line)
+                  if len(summary_lines) >= 10:  # 最多10行非空内容
+                      break
+
+              summary = '\n'.join(summary_lines)
 
               # 使用飞书交互式卡片格式
               payload = {
@@ -99,7 +109,7 @@ jobs:
                       "header": {
                           "title": {
                               "tag": "plain_text",
-                              "content": f"{title} - {today}"
+                              "content": f"📊 BuilderPulse 日报 - {today}"
                           },
                           "template": "blue"
                       },
@@ -107,12 +117,21 @@ jobs:
                           {
                               "tag": "div",
                               "text": {
-                                  "tag": "lark_md",
-                                  "content": content
+                                  "tag": "plain_text",
+                                  "content": summary
                               }
                           },
                           {
                               "tag": "hr"
+                          },
+                          {
+                              "tag": "note",
+                              "elements": [
+                                  {
+                                      "tag": "plain_text",
+                                      "content": "点击下方按钮查看完整日报内容"
+                                  }
+                              ]
                           },
                           {
                               "tag": "action",
@@ -121,10 +140,19 @@ jobs:
                                       "tag": "button",
                                       "text": {
                                           "tag": "plain_text",
-                                          "content": "📖 查看完整报告"
+                                          "content": "📖 在 GitHub 查看"
                                       },
                                       "type": "primary",
-                                      "url": github_link
+                                      "url": github_blob_link
+                                  },
+                                  {
+                                      "tag": "button",
+                                      "text": {
+                                          "tag": "plain_text",
+                                          "content": "📄 纯文本版本"
+                                      },
+                                      "type": "default",
+                                      "url": github_raw_link
                                   }
                               ]
                           }
